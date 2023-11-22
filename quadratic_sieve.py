@@ -1,49 +1,9 @@
 import math
-import time
+from utils import *
 
-def gcd(a, b):
-  '''
-  Calculates the gcd based on the Euclidean Algorithm.
-  '''
-  a = abs(a)
-  b = abs(b)
-  if a<b:
-    #swap a and b so that a is larger
-    temp = a
-    a = b
-    b = temp
-
-  if b == 0:
-    return a
-
-  remainder = a % b
-  while remainder:
-    #loop until remainder is 0
-
-    a = b
-    b = remainder
-    remainder = a % b
-
-  return b
-
-def generate_primes(n):
-    '''
-    Generates primes up to a bound n using the sieve of Eratosthenes
-    '''
-
-    primes = []
-    not_prime = [False] * (n + 1)
-
-    for i in range(2, n + 1):
-        if not_prime[i]:
-            continue
-        # if i is a prime, remove all factors of i starting at i^2
-        for j in range(i * i, n + 1, i):
-            not_prime[j] = True
-        
-        primes.append(i)
-
-    return primes
+def calc_bound(n):
+    L = pow(math.e, 0.5 * math.sqrt(math.log(n) * math.log(math.log(n))))
+    return int(L)
 
 def generate_factor_base(n, B):
     '''
@@ -59,24 +19,6 @@ def generate_factor_base(n, B):
             factor_base.append(p)
     
     return factor_base
-
-
-def quadratic_res(a, p):
-    '''
-    Calculates the legendre symbol to determine if a is a quadratic residue mod p.
-    '''
-    return pow(a, (p - 1) // 2, p)
-
-
-def calc_interval(n):
-    L = pow(math.e, math.sqrt(math.log(n) * math.log(math.log(n))))
-    return math.ceil(pow(L, 3 * math.sqrt(2) / 4))
-
-
-def calc_bound(n):
-    L = pow(math.e, 0.5 * math.sqrt(math.log(n) * math.log(math.log(n))))
-    return int(L)
-
 
 
 def tonelli_shanks(n, p):
@@ -222,33 +164,24 @@ def gauss_elim(m,size):
     for j in range(num_pivots):  # go through each pivot column
         col = pivots[j]
         col_pos = 1 << col
-        #print(col)
         for i in range(0, j): # check each row above the row with the pivot
-            #print(i,col)
             if m[i] & col_pos:
                 # add row j to row i to get rid of a one above a pivot
                 m[i] ^= m[j]
 
-    #print("rref is", matrix_convert_to_list(m,size))
-
-    #now, compute nullspace
+    #compute nullspace
     null = [0]*len(free)
     
     for i in range(len(free)):
         
         free_var = free[i]
-        #print(free_var)
         free_var_pos = 1 << free_var
         for j in range(min(len(m),free_var)):
             row = m[j]
             
             if row & free_var_pos:
-                #print("row", j, "has a 1 in position", free_var, "so new null matrix is")
-                
                 null[i] ^= (1 <<pivots[j])
-                #print(matrix_convert_to_list(null,size))
                 
-                #print(null[i])
                 
         null[i] ^= free_var_pos
     return m, null
@@ -286,7 +219,6 @@ def generate_pos_smooth_nums(n, factor_base, interval_start, interval_end):
     
     threshold = 20
 
-    # store candidates and 
     bsmooth_candidates = []
     x_list = []
 
@@ -301,6 +233,7 @@ def generate_pos_smooth_nums(n, factor_base, interval_start, interval_end):
     bsmooth_nums, x_pos = verify_candidates(factor_base, bsmooth_candidates, x_list)
     
     return bsmooth_nums, x_pos
+
 
 def generate_neg_smooth_nums(n, factor_base, interval_start, interval_end):
     '''
@@ -363,21 +296,13 @@ def quadratic_sieve(n):
       SUBINT_LEN = 50000
     else:
       SUBINT_LEN = 100000
-    #print('n = ', n)
-    #print('n = ', n)
 
     # calculate smoothness bound B and sieve interval
     B = calc_bound(n)
     sieve_interval = max(calc_interval(n), 500000)
 
-    #print('B: ', B, ' | Sieve Interval: ', sieve_interval)
-    #print(((math.sqrt(2) - 1) * math.sqrt(n)) - 1)
-
     # remove unwanted primes 
     factor_base = generate_factor_base(n, B)
-    #print('Factor Base Length: ', len(factor_base))
-    #print('Factor Base: ', factor_base)
-
 
     # sieve for B-smooth numbers in subintervals of size SUBINT_LEN to conserve memory
     smooth_nums = []
@@ -402,8 +327,6 @@ def quadratic_sieve(n):
         smooth_nums.extend(smooths)
         x_list.extend(x_extend)
 
-        #print('interval:', neg_end, end, 'smooths found so far: ', len(smooth_nums))
-
         # stop when we have enough B-smooth numbers
         if len(smooth_nums) > len(factor_base) + 100:
               break
@@ -416,11 +339,6 @@ def quadratic_sieve(n):
         neg_end = max(neg_end - SUBINT_LEN, -1 * sieve_interval)
 
         
-        
-    #print('number of bsmooth: ', len(smooth_nums))
-    #print('bsmooth nums: ', smooth_nums)
-
-
     # build binary matrix for the smooth nums
     size = len(smooth_nums)
     matrix = build_matrix(smooth_nums, factor_base)
@@ -438,9 +356,7 @@ def quadratic_sieve(n):
             if null_row & pos:
                 y_squared *= smooth_nums[i]
                 test_x *= x_list[i]
-        #print("test y_squared:", y_squared)
-        #print("test x:", test_x)
-        #print(((test_x*test_x) %n) == (y_squared % n))
+
         #find what factor_base nums test_y is the square of
         square_root = 1
         shrinker = y_squared
@@ -450,7 +366,7 @@ def quadratic_sieve(n):
                 shrinker = shrinker // div
                 square_root *= factor
         test_y = square_root
-        #print("root of test_num:" , square_root, square_root * square_root == y_squared)
+
         if (test_x % n) != (test_y % n) and (test_x %n) != ((-test_y)%n):
             factor = gcd(test_x-test_y,n)
             if factor != 1:
@@ -458,18 +374,5 @@ def quadratic_sieve(n):
             else:
                 continue
 
-nums = [16921456439215439701,
-        46839566299936919234246726809,
-        6172835808641975203638304919691358469663,
-        3744843080529615909019181510330554205500926021947]
 
-for n in nums:
-    print("-------------------------------------------")
-    print(f"n = {n}")
-    tic = time.perf_counter()
-    f = quadratic_sieve(n)
-    toc = time.perf_counter()
-    print(f"Time: {toc - tic:0.4f} seconds")
-    if f:
-      print(f"{n} = {f[0]} * {f[1]}")
 
