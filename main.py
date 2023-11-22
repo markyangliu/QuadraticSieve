@@ -1,4 +1,5 @@
 import quadratic_sieve
+import time
 
 nums = [16921456439215439701,
         46839566299936919234246726809,
